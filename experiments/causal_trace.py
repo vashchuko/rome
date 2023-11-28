@@ -39,7 +39,7 @@ def main():
 
     aa(
         "--model_name",
-        default="gpt2-xl",
+        default="meta-llama/Llama-2-7b-hf",
         choices=[
             "gpt2-xl",
             "EleutherAI/gpt-j-6B",
@@ -64,7 +64,8 @@ def main():
     os.makedirs(pdf_dir, exist_ok=True)
 
     # Half precision to let the 20b model fit.
-    torch_dtype = torch.float16 if "20b" in args.model_name else None
+    # torch_dtype = torch.float if "20b" in args.model_name else None
+    torch_dtype = torch.float16
 
     mt = ModelAndTokenizer(args.model_name, torch_dtype=torch_dtype)
 
@@ -456,6 +457,7 @@ class ModelAndTokenizer:
         tokenizer=None,
         low_cpu_mem_usage=False,
         torch_dtype=None,
+        token=None
     ):
         if tokenizer is None:
             assert model_name is not None
@@ -472,7 +474,7 @@ class ModelAndTokenizer:
         self.layer_names = [
             n
             for n, m in model.named_modules()
-            if (re.match(r"^(transformer|gpt_neox)\.(h|layers)\.\d+$", n))
+            if (re.match(r"^(transformer|gpt_neox|model)\.(h|layers)\.\d+$", n))
         ]
         self.num_layers = len(self.layer_names)
 
@@ -485,9 +487,15 @@ class ModelAndTokenizer:
 
 
 def layername(model, num, kind=None):
+    if hasattr(model, "model"): # Llama attribute
+        if kind == "embed":
+            return "model.embed_tokens"
+        if kind == "attn":
+            kind = "self_attn"
+        return f'model.layers.{num}{"" if kind is None else "." + kind}'
     if hasattr(model, "transformer"):
         if kind == "embed":
-            return "transformer.wte"
+            return "transformer.wte" # Look-up table which holds all the vectors that correspond to the token values
         return f'transformer.h.{num}{"" if kind is None else "." + kind}'
     if hasattr(model, "gpt_neox"):
         if kind == "embed":
