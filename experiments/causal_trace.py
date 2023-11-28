@@ -552,7 +552,7 @@ def plot_trace_heatmap(result, savepdf=None, title=None, xlabel=None, modelname=
     for i in range(*result["subject_range"]):
         labels[i] = labels[i] + "*"
 
-    with plt.rc_context(rc={"font.family": "Times New Roman"}):
+    with plt.rc_context(rc={"font.family": "Arial"}):
         fig, ax = plt.subplots(figsize=(3.5, 2), dpi=200)
         h = ax.pcolor(
             differences,
@@ -623,6 +623,9 @@ def decode_tokens(tokenizer, token_array):
 def find_token_range(tokenizer, token_array, substring):
     toks = decode_tokens(tokenizer, token_array)
     whole_string = "".join(toks)
+    match tokenizer.name_or_path:
+      case 'meta-llama/Llama-2-7b-hf':
+        substring = substring.replace(" ", "")
     char_loc = whole_string.index(substring)
     loc = 0
     tok_start, tok_end = None, None
